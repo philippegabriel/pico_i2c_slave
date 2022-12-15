@@ -39,7 +39,7 @@ typedef enum i2c_slave_event_t
  * \param i2c Slave I2C instance.
  * \param event Event type.
  */
-typedef void (*i2c_slave_handler_t)(i2c_inst_t *i2c, i2c_slave_event_t event);
+typedef void (*i2c_slave_handler_t)(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t status);
 
 /**
  * \brief Configure I2C instance for slave mode.

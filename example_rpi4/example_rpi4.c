@@ -9,6 +9,7 @@
 #include <pico/stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "pico/sem.h"
 
 static const uint I2C_SLAVE_ADDRESS = 0x17;
 static const uint I2C_BAUDRATE = 100000; // 100 kHz
@@ -28,10 +29,15 @@ static struct
     uint8_t mem_address;
     bool mem_address_written;
 } context;
+// semaphore to signal main to output debug info
+static struct semaphore irq_triggered;
+uint32_t IRQstatus;
 
 // Our handler is called from the I2C ISR, so it must complete quickly. Blocking calls /
 // printing to stdio may interfere with interrupt handling.
-static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event) {
+static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t status) {
+    IRQstatus = status;
+    sem_release(&irq_triggered);
     switch (event) {
     case I2C_SLAVE_RECEIVE: // master has written some data
         if (!context.mem_address_written) {
@@ -71,13 +77,14 @@ static void setup_slave() {
     i2c_slave_init(i2c0, I2C_SLAVE_ADDRESS, &i2c_slave_handler);
 }
 int main() {
-    int i=0;
     stdio_init_all();
+    sem_init(&irq_triggered, 0, 1);
     puts("\nI2C slave example");
     setup_slave();
+    printf("I2c Slave running...");
     while (true) {
-        printf("I2c Slave running...%d\n",i++);
-        sleep_ms(1000);
+	sem_acquire_blocking(&irq_triggered);
+        printf("IRQ triggered...%#010lx\n", IRQstatus);
     }
     return 0;
 }
