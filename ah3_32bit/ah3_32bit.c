@@ -26,7 +26,7 @@ static struct
 {
 // mem is 32 bit big endian
     uint8_t mem[256];
-    uint8_t mem_address;
+    uint32_t mem_address;
     uint8_t inx;
 } context;
 // semaphore to signal main to output debug info
@@ -41,24 +41,24 @@ static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t
     IRQstatus = status;
     sem_release(&irq_triggered);
     switch (event) {
-    case I2C_SLAVE_RECEIVE: // master has written some data
-	if (context.inx == 3) {
-        // LSB of 32 address
-	    context.mem_address = i2c_read_byte(i2c);
-	    context.inx++;
-	    break;
-	}
-	if (context.inx < 3) {
-        // bytes [1:3] of address, we cheat and discard them
-            i2c_read_byte(i2c);
-            context.inx++;
-	    break;
-	}
-        // save into memory
+    case I2C_SLAVE_RECEIVE:
+	if (context.inx > 0) {
+        // First 4 bytes is the register address in big endian
+	    context.inx--;
+	    ((uint8_t*) &(context.mem_address))[context.inx] = i2c_read_byte(i2c);
+	// atm, we only implement a 0xff lenght regmap, so we truncate the address before use
+	    if(context.inx == 0) {
+                context.mem_address &= 0x000000ff;
+	    }
+	} else {
+        // If we keep receiving bytes after the register address
+	// we're in slave receiver mode
         context.mem[context.mem_address] = i2c_read_byte(i2c);
         context.mem_address++;
+	}
         break;
-    case I2C_SLAVE_REQUEST: // master is requesting data
+    case I2C_SLAVE_REQUEST:
+	// Slave transmitter mode
 	if(context.mem_address == 0xf0){
         // Update memory mapped system tick
 	    *timew =  time_us_32();
@@ -70,7 +70,7 @@ static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t
         context.mem_address++;
         break;
     case I2C_SLAVE_FINISH: // master has signalled Stop / Restart
-        context.inx=0;
+        context.inx=4;
         break;
     default:
         break;
@@ -89,7 +89,7 @@ static void setup_slave() {
     i2c_init(i2c0, I2C_BAUDRATE);
     // configure I2C0 for slave mode
     i2c_slave_init(i2c0, I2C_SLAVE_ADDRESS, &i2c_slave_handler);
-    context.inx=0;
+    context.inx=4;
 }
 int main() {
     const uint LED_PIN = PICO_DEFAULT_LED_PIN;
@@ -105,7 +105,7 @@ int main() {
     printf("I2c Slave running...");
     while (true) {
 	sem_acquire_blocking(&irq_triggered);
-        printf("IRQ triggered...%#010lx,%u,%u\n", IRQstatus, context.inx, context.mem_address);
+        printf("IRQ triggered...%#010lx,%u,%#010lx\n", IRQstatus, context.inx, context.mem_address);
     }
     return 0;
 }
