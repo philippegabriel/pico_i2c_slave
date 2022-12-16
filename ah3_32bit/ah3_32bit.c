@@ -37,7 +37,7 @@ uint32_t IRQstatus;
 // Our handler is called from the I2C ISR, so it must complete quickly. Blocking calls /
 // printing to stdio may interfere with interrupt handling.
 static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t status) {
-    uint8_t timeb[4];
+    uint32_t* timew = (uint32_t*) &(context.mem[0xf0]);
     IRQstatus = status;
     sem_release(&irq_triggered);
     switch (event) {
@@ -61,12 +61,9 @@ static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t
     case I2C_SLAVE_REQUEST: // master is requesting data
 	if(context.mem_address == 0xf0){
         // Update memory mapped system tick
-	    *((uint32_t*) timeb) =  time_us_32();
-	//TODO: find some system/ARM intrinsyc to do the byte swap
-	    context.mem[0xf0] = timeb[3];
-	    context.mem[0xf1] = timeb[2];
-	    context.mem[0xf2] = timeb[1];
-	    context.mem[0xf3] = timeb[0];
+	    *timew =  time_us_32();
+	// byte swap little endian -> big endian
+	    asm( "rev %0,%0" : "+r" (*timew) );
 	}
         // load from memory
         i2c_write_byte(i2c, context.mem[context.mem_address]);
@@ -95,8 +92,13 @@ static void setup_slave() {
     context.inx=0;
 }
 int main() {
+    const uint LED_PIN = PICO_DEFAULT_LED_PIN;
     stdio_init_all();
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+    gpio_put(LED_PIN, 1);
     sleep_ms(3000);	
+    gpio_put(LED_PIN, 0);
     sem_init(&irq_triggered, 0, 1);
     puts("\nI2C slave example");
     setup_slave();
