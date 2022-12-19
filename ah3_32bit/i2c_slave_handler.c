@@ -63,6 +63,7 @@ static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t
 }
 
 void setup_slave() {
+    printf("Initialising I2C Slave mode...\n");
     gpio_init(I2C_SLAVE_SDA_PIN);
     gpio_set_function(I2C_SLAVE_SDA_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SLAVE_SDA_PIN);
