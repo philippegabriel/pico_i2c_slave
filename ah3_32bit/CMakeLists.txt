@@ -1,4 +1,4 @@
-add_executable(ah3_32bit ah3_32bit.c)
+add_executable(ah3_32bit ah3_32bit.c i2c_slave_handler.c)
 
 pico_enable_stdio_uart(ah3_32bit 0)
 pico_enable_stdio_usb(ah3_32bit 1)
