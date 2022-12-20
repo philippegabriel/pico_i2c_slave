@@ -20,7 +20,6 @@ static const uint I2C_SLAVE_SCL_PIN = PICO_DEFAULT_I2C_SCL_PIN; // 5
 // Our handler is called from the I2C ISR, so it must complete quickly. Blocking calls /
 // printing to stdio may interfere with interrupt handling.
 static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t status) {
-    uint32_t* timew = (uint32_t*) &(context.mem[0xf0]);
     context.IRQstatus = status;
     sem_release(&irq_triggered);
     switch (event) {
@@ -44,9 +43,9 @@ static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t
 	// Slave transmitter mode
 	if(context.mem_address == 0xf0){
         // Update memory mapped system tick
-	    *timew =  time_us_32();
+	    *(memptr(0xf0)) =  time_us_32();
 	// byte swap little endian -> big endian
-	    asm( "rev %0,%0" : "+r" (*timew) );
+	    asm( "rev %0,%0" : "+r" (*(memptr(0xf0))) );
 	}
         // load from memory
         i2c_write_byte(i2c, context.mem[context.mem_address]);

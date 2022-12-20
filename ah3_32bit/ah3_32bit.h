@@ -19,4 +19,6 @@ extern struct
 } context;
 // semaphore to signal main to output debug info
 extern struct semaphore irq_triggered;
+// 
+#define memptr(X) ((uint32_t*) &(context.mem[(X)]))
 
