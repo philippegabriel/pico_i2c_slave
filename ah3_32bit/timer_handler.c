@@ -8,8 +8,9 @@
 #include "sine_wave.h"
 
 // timer period in milliseconds
-#define TIMER_PERIOD 10
+#define TIMER_PERIOD 1
 static uint32_t counter = 0;
+static uint32_t counter2 = 0;
 static struct repeating_timer timer;
 // Increase regmap @ 0xa0 every tick
 static bool repeating_timer_callback(struct repeating_timer *t) {
@@ -20,6 +21,10 @@ static bool repeating_timer_callback(struct repeating_timer *t) {
     // counter mod SINE_WAVE_TABLE_LEN
     *(memptr(0xb0)) = sine_wave[counter & 0x7ff];
     counter++;
+    if(counter % 10 == 0){
+        counter2++;
+	 *(memptr(0xc0)) = sine_wave[counter2 & 0x7ff];
+    }
     return true;
 }
 bool timer_init() {

@@ -21,7 +21,9 @@ static const uint I2C_SLAVE_SCL_PIN = PICO_DEFAULT_I2C_SCL_PIN; // 5
 // printing to stdio may interfere with interrupt handling.
 static void i2c_slave_handler(i2c_inst_t *i2c, i2c_slave_event_t event, uint32_t status) {
     context.IRQstatus = status;
+#ifdef DEBUG    
     sem_release(&irq_triggered);
+#endif    
     switch (event) {
     case I2C_SLAVE_RECEIVE:
 	if (context.inx > 0) {
