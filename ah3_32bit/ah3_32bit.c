@@ -12,6 +12,7 @@
 #include "ah3_32bit.h"
 #include "i2c_slave_handler.h"
 #include "timer_handler.h"
+#include "dma.h"
 
 
 context_struct context;
@@ -31,6 +32,7 @@ int main() {
     sem_init(&irq_triggered, 0, 1);
 #endif    
     setup_slave();
+    init_dma();
     timer_init();
     sleep_ms(3000);	
     gpio_put(LED_PIN, 0);
